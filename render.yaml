@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: bot-discord-pedrin
+    runtime: node
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: CLIENT_ID
+        sync: false
+      - key: OWNER_ID
+        sync: false
+      - key: PORT
+        value: 3000

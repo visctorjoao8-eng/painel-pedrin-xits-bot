@@ -7,7 +7,17 @@ const path = require("path");
 // ══════════════════════════════════════════════════════════════════════════════
 // CONFIGURAÇÃO
 // ══════════════════════════════════════════════════════════════════════════════
-const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
+// Carregar config: variáveis de ambiente (Render) ou config.json (local)
+let config;
+if (fs.existsSync("./config.json")) {
+  config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
+} else {
+  config = {
+    token: process.env.DISCORD_TOKEN,
+    clientid: process.env.CLIENT_ID,
+    ownerid: process.env.OWNER_ID
+  };
+}
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.DirectMessages] });
 
 const BOT_HTTP_PORT = process.env.PORT || 3001;
