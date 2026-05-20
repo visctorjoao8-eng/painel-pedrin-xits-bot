@@ -1,0 +1,49 @@
+{
+    "ticket2": {
+        "configs": {
+            "titulo": "Mensalidades",
+            "descricao": "**Visual - Player**\n\n- ESP Name\n- ESP Box\n- ESP Line\n- ESP Skeleton\n- ESP Distance\n- ESP ID\n- ESP Health\n- ESP Weapon\n\n**Visual - Ped**\n\n**Em Desenvolvimento**\n\n**Visual - Veículos**\n\n- ESP Name\n- ESP Box\n- ESP Distance\n- ESP ID\n\n**Aimbot**\n\n- Aimbot/Silent Aim\n- Draw Fov\n- Check Visibility\n- Fov Size\n- Smooth\n- Max Distance\n- Aim Local (Body Part)\n\n**Misc - Local Player**\n\n- Change Gravity\n- Invisible/Visible\n- Airbreak\n- Jetpack\n- Fast Rotation\n- Anti Stun\n- Super Jump\n- Misc - Weapon\n\n- No Recoil\n- Fast Fire\n- Fast Aim\n\n**Misc - Vehicle**\n\n- God Mode\n- Bike Super Jump\n- Turn Vehicle On\n- Plant a bomb\n- Lock car\n- Unock car\n- Push Near Vehicle\n\n**Misc - Game**\n\n- Hide Radar\n- Heat Size\n- Open Player Manager\n- Open Vehicle Manager\n- Fog Distance\n- Render Distance\n- Clouds Enabled\n- Sky Color\n- Water Color\n- Sun Color\n\n**Misc - Vehicle Manager**\n\n- Show All Map Vehicles\n- Explode Vechile\n- Teleport To Vehicle\n- Push Vehicle To Me\n\n**Misc - Player Manager**\n\n- Show All Server Players\n- Explode Player\n- Teleport To Player\n- Stick In Player\n- Unstick In Player\n- Stick Vehicle In Player\n\n**Settings**\n\n- Server Stats\n\n**Settings - ESP**\n\n- Max Player distance\n- Max Vehicle Distance\n- Check Sel Player\n- Check Health Player\n- Color ESP\n\n**Settings - Menu**\n\n- Menu Key\n- Anti SS Bypass\n- Blank Screenshot\n- Clear Screenshot\n- Infinite Load Screenshot\n- Fake Screenshot\n- Settings - Misc\n- Airbreak Velocity\n- Airbreak StayZ",
+            "banner": "https://media.discordapp.net/attachments/1175503799218098196/1198491435230576720/standard.gif?ex=65d18e21&is=65bf1921&hm=331d0ebf80d4e7281a5e6729635b386b599a1f079a74643e4196f6e28ebd56d6&="
+        },
+        "categorias": [
+            {
+                "nome": "TICKET",
+                "descricao": "Opção padrao após criar o painel.",
+                "emoji": "🎫",
+                "value": "ticket"
+            }
+        ],
+        "msgId": "1205945950539878490",
+        "channelId": "1205791413544030209"
+    },
+    "TICKETS": {
+        "configs": {
+            "banner": "https://cdn.discordapp.com/attachments/1499655746533593108/1500076691081400320/ticket4.webp?ex=69f71ec9&is=69f5cd49&hm=7a65d9d6e43f61a08e18170d1def1b41c3bfdd222f4a9175b76d2c96554ead5b&",
+            "miniatura": "https://cdn.discordapp.com/attachments/1499655746533593108/1500076691081400320/ticket4.webp?ex=69f71ec9&is=69f5cd49&hm=7a65d9d6e43f61a08e18170d1def1b41c3bfdd222f4a9175b76d2c96554ead5b&",
+            "titulo": "ATENDIMENTO",
+            "descricao": "SUPORTE 24 HORAS"
+        },
+        "categorias": [
+            {
+                "nome": "⭐・support",
+                "descricao": "Abra ticket para falar com algum support",
+                "emoji": "⭐",
+                "value": "⭐・support"
+            },
+            {
+                "nome": "⭐・rembolso",
+                "descricao": "Abra ticket caso queira rembolso",
+                "emoji": "⭐",
+                "value": "⭐・rembolso"
+            },
+            {
+                "nome": "⭐・RECEBER PRODUTO",
+                "descricao": "Abra essa categoria para receber o produto",
+                "emoji": "⭐",
+                "value": "⭐・receber produto"
+            }
+        ],
+        "msgId": "1500078809746247842",
+        "channelId": "1499655745770094666"
+    }
+}

@@ -1,0 +1,39 @@
+{
+    "ticket": {
+        "nome": "AntiScam | American | Sistema de Ticket",
+        "configs": {
+            "descricao": "Clique **abaixo** para abrir um **TICKET**",
+            "banner": "https://media.discordapp.net/attachments/1188319126461108276/1200994651491012732/image.png?ex=65d16eee&is=65bef9ee&hm=aafe8799c0ade5fe209f5929b410c8c6f0c8c97193159661ab9565178c41ab0f&=&format=webp&quality=lossless",
+            "titulo": "Atendimento"
+        },
+        "permissoes": {
+            "1202833606246924348": true,
+            "1190779649828073573": true
+        },
+        "buttonConfig": {
+            "label": "Suporte",
+            "emoji": "<:clientes:1196275497009680455>",
+            "color": "Azul"
+        },
+        "configsAv": [
+            {
+                "SistemaModal": "Ligado",
+                "SistemaProtocolo": "Ligado",
+                "CategoriaSelecionada": "Desligado"
+            }
+        ],
+        "functions": [
+            {
+                "CriarCall": "Ligado",
+                "Poke": "Ligado",
+                "Assumir": "Ligado",
+                "Renomear": "Ligado",
+                "Pagamentos": "Ligado",
+                "GerenciarMembro": "Ligado"
+            }
+        ],
+        "guildId": "1199384425352409258",
+        "msgId": "1206041080106192978",
+        "channelId": "1206040397609050202"
+    }
+}
