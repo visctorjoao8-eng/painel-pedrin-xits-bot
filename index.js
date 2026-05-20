@@ -487,7 +487,7 @@ const httpServer = http.createServer((req, res) => {
   }
 
   // Health check (Render precisa responder na raiz)
-  if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+  if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/health" || url.pathname === "/healthz")) {
     res.writeHead(200, { "Content-Type": "application/json" });
     return res.end(JSON.stringify({ status: "online", bot: "BotGelado" }));
   }
