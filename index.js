@@ -7,16 +7,23 @@ const path = require("path");
 // ══════════════════════════════════════════════════════════════════════════════
 // CONFIGURAÇÃO
 // ══════════════════════════════════════════════════════════════════════════════
-// Carregar config: variáveis de ambiente (Render) ou config.json (local)
+// Carregar config: prioridade para variáveis de ambiente (Render/produção), senão config.json (local)
 let config;
-if (fs.existsSync("./config.json")) {
-  config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
-} else {
+if (process.env.DISCORD_TOKEN) {
+  // Produção (Render) — usa variáveis de ambiente
   config = {
     token: process.env.DISCORD_TOKEN,
     clientid: process.env.CLIENT_ID,
     ownerid: process.env.OWNER_ID
   };
+  console.log("[Config] ✅ Configuração carregada via variáveis de ambiente");
+} else if (fs.existsSync("./config.json")) {
+  // Desenvolvimento local — usa config.json
+  config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
+  console.log("[Config] ✅ Configuração carregada via config.json (local)");
+} else {
+  console.error("[Config] ❌ Nenhuma configuração encontrada! Defina DISCORD_TOKEN ou crie config.json");
+  process.exit(1);
 }
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.DirectMessages] });
 
@@ -477,6 +484,12 @@ const httpServer = http.createServer((req, res) => {
       }
     });
     return;
+  }
+
+  // Health check (Render precisa responder na raiz)
+  if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ status: "online", bot: "BotGelado" }));
   }
 
   res.writeHead(404);
