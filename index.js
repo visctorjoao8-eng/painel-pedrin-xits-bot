@@ -40,8 +40,8 @@ try {
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.DirectMessages] });
 
 const BOT_HTTP_PORT = readPositiveNumberEnv("PORT", 3001);
-const HEARTBEAT_CHECK_MS = readPositiveNumberEnv("HEARTBEAT_CHECK_MS", 3000);  // Verificar a cada 3s (era 15s)
-const HEARTBEAT_TIMEOUT_MS = readPositiveNumberEnv("HEARTBEAT_TIMEOUT_MS", 5000); // Timeout após 5s sem resposta (era 13s)
+const HEARTBEAT_CHECK_MS = readPositiveNumberEnv("HEARTBEAT_CHECK_MS", 3000);  // Verificar a cada 3s
+const HEARTBEAT_TIMEOUT_MS = readPositiveNumberEnv("HEARTBEAT_TIMEOUT_MS", 15000); // Timeout após 15s (era 5s - muito curto)
 const CPP_COMMAND_PORT = 7000;
 
 // sessionId → { browsers: [...] }
