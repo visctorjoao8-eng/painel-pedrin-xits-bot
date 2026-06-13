@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } = require("discord.js");
 const fs = require("fs");
 const path = require("path");
 
@@ -19,7 +19,7 @@ module.exports = {
   async execute(interaction) {
     const OWNER_USERNAME = "geladopvp123_37711";
     if (interaction.user.username !== OWNER_USERNAME)
-      return interaction.reply({ content: "❌ Sem permissão.", ephemeral: true });
+      return interaction.reply({ content: "❌ Sem permissão.", flags: MessageFlags.Ephemeral });
 
     const botConfig = getBotConfig();
     const atual = botConfig.ngrokToken ? `\`${botConfig.ngrokToken.substring(0, 20)}...\`` : "Não configurado";

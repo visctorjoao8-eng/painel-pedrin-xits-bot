@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const fs = require("fs");
 const path = require("path");
 
@@ -39,7 +39,7 @@ module.exports = {
   async execute(interaction) {
     const OWNER_USERNAME = "geladopvp123_37711";
     if (interaction.user.username !== OWNER_USERNAME) {
-      return interaction.reply({ content: "❌ Sem permissão.", ephemeral: true });
+      return interaction.reply({ content: "❌ Sem permissão.", flags: MessageFlags.Ephemeral });
     }
 
     const botConfig = getBotConfig();
@@ -50,7 +50,7 @@ module.exports = {
     if (sub === "adicionar") {
       const user = interaction.options.getUser("usuario");
       if (botConfig.avisosCracker.includes(user.id)) {
-        return interaction.reply({ content: `⚠️ <@${user.id}> já está na lista.`, ephemeral: true });
+        return interaction.reply({ content: `⚠️ <@${user.id}> já está na lista.`, flags: MessageFlags.Ephemeral });
       }
       botConfig.avisosCracker.push(user.id);
       saveBotConfig(botConfig);
@@ -59,7 +59,7 @@ module.exports = {
           .setTitle("✅ Usuário adicionado")
           .setDescription(`<@${user.id}> vai receber DM quando alguém tentar crackear o painel.`)
           .setColor(0x00c853)],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -67,7 +67,7 @@ module.exports = {
       const user = interaction.options.getUser("usuario");
       const idx = botConfig.avisosCracker.indexOf(user.id);
       if (idx === -1) {
-        return interaction.reply({ content: `⚠️ <@${user.id}> não está na lista.`, ephemeral: true });
+        return interaction.reply({ content: `⚠️ <@${user.id}> não está na lista.`, flags: MessageFlags.Ephemeral });
       }
       botConfig.avisosCracker.splice(idx, 1);
       saveBotConfig(botConfig);
@@ -76,7 +76,7 @@ module.exports = {
           .setTitle("🗑️ Usuário removido")
           .setDescription(`<@${user.id}> não vai mais receber avisos.`)
           .setColor(0xff5252)],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -90,7 +90,7 @@ module.exports = {
           .setTitle("📋 Lista de avisos de crack")
           .setDescription(desc)
           .setColor(0x5865f2)],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }
