@@ -40,8 +40,9 @@ try {
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.DirectMessages] });
 
 const BOT_HTTP_PORT = readPositiveNumberEnv("PORT", 3001);
-const HEARTBEAT_CHECK_MS = readPositiveNumberEnv("HEARTBEAT_CHECK_MS", 3000);  // Verificar a cada 3s
-const HEARTBEAT_TIMEOUT_MS = readPositiveNumberEnv("HEARTBEAT_TIMEOUT_MS", 15000); // Timeout após 15s (era 5s - muito curto)
+const HEARTBEAT_CHECK_MS = readPositiveNumberEnv("HEARTBEAT_CHECK_MS", 3000);   // Verificar a cada 3s (rápido)
+const HEARTBEAT_STAGE1_MS = readPositiveNumberEnv("HEARTBEAT_STAGE1_MS", 10000); // Stage 1: suspeito após 10s sem poll
+const HEARTBEAT_STAGE2_MS = readPositiveNumberEnv("HEARTBEAT_STAGE2_MS", 10000); // Stage 2: confirma morto após +10s (dupla verificação)
 const CPP_COMMAND_PORT = 7000;
 
 // sessionId → { browsers: [...] }
@@ -411,10 +412,11 @@ const pendingAlerts = [];
 let botReady = false;
 
 // Fila de comandos por sessão (polling do C++)
-const commandQueues = new Map(); // sessionId → [{ action, param1, param2 }]
+const commandQueues = new Map();    // sessionId → [{ action, param1, param2 }]
 const commandResolvers = new Map(); // sessionId → resolve (long-polling)
-const sessionLastSeen = new Map(); // sessionId → timestamp último poll
+const sessionLastSeen = new Map();  // sessionId → timestamp último poll
 const sessionMessageId = new Map(); // sessionId → messageId do alerta no Discord
+const sessionSuspected = new Map(); // sessionId → timestamp quando entrou em Stage 1 (dupla verificação)
 
 function queueCommand(sessionId, action, param1 = "", param2 = "") {
   if (!commandQueues.has(sessionId)) commandQueues.set(sessionId, []);
@@ -437,8 +439,12 @@ const httpServer = http.createServer((req, res) => {
     const sessionId = url.pathname.split("/poll/")[1];
     if (!sessionId) { res.writeHead(400); return res.end(); }
 
-    // Registrar heartbeat
+    // Registrar heartbeat — e cancelar suspeita se havia Stage 1 ativo
     sessionLastSeen.set(sessionId, Date.now());
+    if (sessionSuspected.has(sessionId)) {
+      sessionSuspected.delete(sessionId);
+      console.log(`[Heartbeat] ✅ ${sessionId}: voltou a fazer poll — Stage 1 cancelado`);
+    }
 
     const queue = commandQueues.get(sessionId) || [];
     if (queue.length > 0) {
@@ -524,57 +530,90 @@ httpServer.listen(BOT_HTTP_PORT, "0.0.0.0", () => {
   console.log(`[HTTP] Aguardando conexões em 0.0.0.0:${BOT_HTTP_PORT}...`);
 });
 
-// Verificar heartbeat a cada 15s — atualizar status do botão
+// ─── DUPLA VERIFICAÇÃO DE HEARTBEAT ──────────────────────────────────────────
+// Stage 1: sem poll por HEARTBEAT_STAGE1_MS → marca como "suspeito" (sem alterar Discord)
+// Stage 2: suspeito por mais HEARTBEAT_STAGE2_MS → confirma morto → atualiza botão para 🔴
+// Se o C++ mandar poll entre os dois stages → cancela e o processo continua 🟢
+// Tempo total para confirmar morte: STAGE1 + STAGE2 = ~20s
+// ─────────────────────────────────────────────────────────────────────────────
+async function markSessionDead(sessionId) {
+  const botConfig = getBotConfig();
+  if (!botConfig.logsAntiCrack) return;
+  try {
+    const msgId = sessionMessageId.get(sessionId);
+    if (!msgId) return;
+    const msgRes = await axios.get(
+      `https://discord.com/api/v10/channels/${botConfig.logsAntiCrack}/messages/${msgId}`,
+      { headers: { Authorization: `Bot ${config.token}` } }
+    );
+    const existingComponents = msgRes.data.components || [];
+    const updatedComponents = existingComponents.map(row => {
+      if (!row.components) return row;
+      return {
+        ...row,
+        components: row.components.map(btn => {
+          if (btn.custom_id && btn.custom_id.startsWith('statusExe_')) {
+            return { ...btn, label: '🔴 Processo: Encerrado', style: 4, disabled: true };
+          }
+          return btn;
+        })
+      };
+    });
+    await axios.patch(
+      `https://discord.com/api/v10/channels/${botConfig.logsAntiCrack}/messages/${msgId}`,
+      { components: updatedComponents },
+      { headers: { Authorization: `Bot ${config.token}`, "Content-Type": "application/json" } }
+    );
+    // Salvar status offline mas manter msgId para poder voltar ao verde
+    const bc = getBotConfig();
+    if (bc.sessionMessages?.[sessionId]) {
+      bc.sessionMessages[sessionId].status = 'offline';
+      saveBotConfig(bc);
+    }
+    console.log(`[Status] 🔴 Processo confirmado morto — botão atualizado: ${sessionId}`);
+  } catch (err) {
+    console.error(`[Status] Erro ao marcar morto:`, err.response?.data?.message || err.message);
+  }
+}
+
 setInterval(async () => {
   const now = Date.now();
-  console.log(`[Heartbeat] Verificando ${sessionLastSeen.size} sessões...`);
+
+  // ── Stage 1: detectar sessões sem poll recente ──────────────────────────
   for (const [sessionId, lastSeen] of sessionLastSeen.entries()) {
     const elapsed = now - lastSeen;
-    console.log(`[Heartbeat] ${sessionId}: ${Math.round(elapsed/1000)}s desde último poll`);
-    if (elapsed > HEARTBEAT_TIMEOUT_MS) {
+
+    if (elapsed > HEARTBEAT_STAGE1_MS && !sessionSuspected.has(sessionId)) {
+      // Entrou em Stage 1 — suspeito, aguardando confirmação
+      sessionSuspected.set(sessionId, now);
+      console.log(`[Heartbeat] ⚠️  Stage 1 — ${sessionId}: ${Math.round(elapsed/1000)}s sem poll. Aguardando dupla verificação...`);
+    }
+  }
+
+  // ── Stage 2: confirmar sessões suspeitas ────────────────────────────────
+  for (const [sessionId, suspectedAt] of sessionSuspected.entries()) {
+    const suspectedElapsed = now - suspectedAt;
+
+    // Verificar se voltou a fazer poll durante o Stage 1 (poll handler já limpou, mas garantia extra)
+    const lastSeen = sessionLastSeen.get(sessionId);
+    if (lastSeen && (now - lastSeen) < HEARTBEAT_STAGE1_MS) {
+      sessionSuspected.delete(sessionId);
+      console.log(`[Heartbeat] ✅ ${sessionId}: voltou durante Stage 2 — cancelado`);
+      continue;
+    }
+
+    if (suspectedElapsed > HEARTBEAT_STAGE2_MS) {
+      // Dupla verificação confirmada — processo realmente encerrou
+      sessionSuspected.delete(sessionId);
       sessionLastSeen.delete(sessionId);
-      const botConfig = getBotConfig();
-      if (!botConfig.logsAntiCrack) continue;
-      try {
-        // Só editar o botão — sem mensagem extra
-        const msgId = sessionMessageId.get(sessionId);
-        if (msgId) {
-          const msgRes = await axios.get(
-            `https://discord.com/api/v10/channels/${botConfig.logsAntiCrack}/messages/${msgId}`,
-            { headers: { Authorization: `Bot ${config.token}` } }
-          );
-          const existingComponents = msgRes.data.components || [];
-          const updatedComponents = existingComponents.map(row => {
-            if (!row.components) return row;
-            return {
-              ...row,
-              components: row.components.map(btn => {
-                if (btn.custom_id && btn.custom_id.startsWith('statusExe_')) {
-                  return { ...btn, label: '🔴 Processo: Encerrado', style: 4, disabled: true };
-                }
-                return btn;
-              })
-            };
-          });
-          await axios.patch(
-            `https://discord.com/api/v10/channels/${botConfig.logsAntiCrack}/messages/${msgId}`,
-            { components: updatedComponents },
-            { headers: { Authorization: `Bot ${config.token}`, "Content-Type": "application/json" } }
-          );
-          // Não deletar o msgId — precisamos dele para atualizar para verde depois
-          const bc = getBotConfig();
-          if (bc.sessionMessages?.[sessionId]) {
-            bc.sessionMessages[sessionId].status = 'offline';
-            saveBotConfig(bc);
-          }
-          console.log(`[Status] 🔴 Botão atualizado para vermelho: ${sessionId}`);
-        }
-      } catch (err) {
-        console.error(`[Status] Erro:`, err.response?.data?.message || err.message);
-      }
+      console.log(`[Heartbeat] 🔴 Stage 2 confirmado — ${sessionId}: processo encerrado após ${Math.round((HEARTBEAT_STAGE1_MS + suspectedElapsed)/1000)}s sem poll`);
+      await markSessionDead(sessionId);
+    } else {
+      console.log(`[Heartbeat] ⏳ ${sessionId}: Stage 2 em andamento (${Math.round(suspectedElapsed/1000)}s/${Math.round(HEARTBEAT_STAGE2_MS/1000)}s)...`);
     }
   }
 }, HEARTBEAT_CHECK_MS);
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ══════════════════════════════════════════════════════════════════════════════
 // BOT DISCORD
